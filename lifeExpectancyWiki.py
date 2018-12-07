@@ -114,7 +114,7 @@ def dl_several_dates(list_year, size_batch=1000):
             # If no next page (we reached the end of that year's list of {event})
             if not p_next:
                 break
-        return names
+        return names[0:size_batch]
 
     l_indiv_birth = []
     l_indiv_death = []
@@ -145,16 +145,20 @@ def import_wiki_pages_batch(list_year_death, duration_h=1, nb_indiv_batch=100):
     """ Download the categories and summary (and content?) of wikipedia pages
     and store them locally to an easier use later. Use ind_n to know where to
     resume downloading """
-    t1 = time()/60
-    timer = 60*duration_h  # Length of the time period of downloading (in minutes)
+    t1 = time()
+    timer = 3600*duration_h  # Length of the time period of downloading (in minutes)
     l_indiv = load_obj(f"l_indiv_{list_year_death[0]}_{list_year_death[-1]}")
-    while (time()/60 - t1) < timer:
-        print(f"Temps restant : {np.round(timer - (time()/60-t1)):.1f} minutes")
+    while (time() - t1) < timer:
+        t_start_loop = time()
+        time_left = timer - (t_start_loop - t1)
+        print(f"Temps restant : {time_left//3600:.0f}h{time_left%3600//60:.0f}min")
+
         try:
             d_data = load_obj(f"d_data_{list_year_death[0]}_{list_year_death[-1]}")
         except FileNotFoundError:
             d_data = {}
-        save_obj(d_data, "save_d_data")
+        nb_d_init = len(d_data)
+        save_obj(d_data, f"save_d_data_{list_year_death[0]}_{list_year_death[-1]}")
         try:
             ind_n = load_obj(f"ind_n_{list_year_death[0]}_{list_year_death[-1]}")
         except FileNotFoundError:
@@ -171,6 +175,8 @@ def import_wiki_pages_batch(list_year_death, duration_h=1, nb_indiv_batch=100):
                     continue
         save_obj(ind_n1, f"ind_n_{list_year_death[0]}_{list_year_death[-1]}")
         save_obj(d_data, f"d_data_{list_year_death[0]}_{list_year_death[-1]}")
+        nb_d_final = len(d_data)
+        print(f"{(nb_d_final - nb_d_init)/((time() - t_start_loop)/3600):.0f} people's pages imported per hour")
 
 def dates_to_df(d_data):
     """ Extract dates of birth/deaths from wiki pages locally stored """
@@ -226,14 +232,15 @@ def dates_to_df(d_data):
 if __name__ == '__main__':
     # Load locally saved data
     # l_indiv = load_obj('l_indiv_0_999')
-    list_year_death = range(1800, 2000)
     # list_year_death = range(1000, 1100)
+    list_year_death = range(1000, 1800)
+    # list_year_death = range(1800, 2000)
     l_indiv = load_obj(f'l_indiv_{list_year_death[0]}_{list_year_death[-1]}')
 
     # Import more wiki pages about individuals and store them locally
     if 1:
-        dl_several_dates(list_year_death, size_batch=1000)
-        # import_wiki_pages_batch(list_year_death, duration_h=10)
+        # dl_several_dates(list_year_death, size_batch=500)
+        import_wiki_pages_batch(list_year_death, duration_h=6)
 
     # Extract dates from dictionnary of wiki pages
     if 0:
@@ -401,5 +408,3 @@ if __name__ == '__main__':
         except FileNotFoundError:
             pass
         save_obj(l_indiv, f"l_indiv_{list_year_death[0]}_{list_year_death[-1]}")
-
-
